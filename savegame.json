@@ -1,0 +1,26 @@
+{
+  "achievements": {
+    "first_blood": false,
+    "survivor": false,
+    "sharpshooter": false,
+    "unstoppable": false,
+    "long_run": false,
+    "meteor_survivor": false,
+    "blackhole_escape": false,
+    "no_damage": false,
+    "bonus_collector": false,
+    "tank_slayer": false,
+    "fast_hunter": false,
+    "zigzag_master": false,
+    "combo_killer": false,
+    "shield_master": false,
+    "heal_master": false
+  },
+  "stats": {
+    "enemies_killed": 0,
+    "shots_fired": 0,
+    "shots_hit": 0,
+    "time_survived": 0,
+    "levels_completed": 1
+  }
+}
