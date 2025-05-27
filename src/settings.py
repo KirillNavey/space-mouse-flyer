@@ -1,6 +1,6 @@
 import os
 
-USE_SPRITES = False  # Use sprites for the game objects
+USE_SPRITES = True  # Use sprites for the game objects
 ''' - спрайт игрока player.png
  - спрайт обычного врага enemy.png
  - спрайт быстрого врага enemy_fast.png
