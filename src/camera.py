@@ -3,14 +3,17 @@ import random
 import math
 
 class Camera:
-    def __init__(self, start_pos):
+    def __init__(self, start_pos, **kwargs):
         self.pos = pygame.Vector2(start_pos)
         self.target = pygame.Vector2(start_pos)
         self.shake_timer = 0
         self.shake_strength = 0
         self.shake_offset = pygame.Vector2(0, 0)
         self.kick = pygame.Vector2(0, 0)
-        self.kick_decay = 0.85
+        self.kick_decay = kwargs.get("kick_decay", 0.85)
+        # Моды могут добавить любые новые поля через kwargs
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def update(self, player_pos):
         self.target = pygame.Vector2(player_pos)

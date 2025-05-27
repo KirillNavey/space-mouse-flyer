@@ -21,6 +21,18 @@
     "shots_fired": 0,
     "shots_hit": 0,
     "time_survived": 0,
-    "levels_completed": 1
+    "levels_completed": 1,
+    "bonuses_collected": 0,
+    "tank_kills": 0,
+    "fast_kills": 0,
+    "zigzag_kills": 0,
+    "shield_collected": 0,
+    "heal_collected": 0,
+    "damage_taken": 0,
+    "combo_counter": 0,
+    "combo_timer": 0,
+    "last_kill_time": 0,
+    "survived_meteor": false,
+    "survived_blackhole": false
   }
 }

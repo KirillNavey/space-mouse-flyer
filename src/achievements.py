@@ -4,9 +4,10 @@ import json
 from settings import * 
 
 class Achievements:
-    def __init__(self, config):
+    def __init__(self, config, **kwargs):
         self.config = config
-        self.achievements = {
+        # Моды могут расширять/заменять список достижений через kwargs
+        self.achievements = kwargs.get("achievements", {
             "first_blood": False,       
             "survivor": False,          
             "sharpshooter": False,      
@@ -22,8 +23,8 @@ class Achievements:
             "combo_killer": False,          
             "shield_master": False,         
             "heal_master": False,           
-        }
-        self.stats = {
+        })
+        self.stats = kwargs.get("stats", {
             "enemies_killed": 0,
             "shots_fired": 0,
             "shots_hit": 0,
@@ -41,76 +42,82 @@ class Achievements:
             "last_kill_time": 0,
             "survived_meteor": False,
             "survived_blackhole": False,
-        }
+        })
         self.load()
         self.popup_queue = []
         self.active_popups = []
         self.POPUP_TIME = 90
 
+        # Моды могут добавить любые новые поля через kwargs
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def check(self, score, game_time, player, surface, achievement_sound=None):
-        if score >= 1 and not self.achievements["first_blood"]:
+        # Моды могут заменить этот метод или расширить его через наследование
+        if score >= 1 and not self.achievements.get("first_blood", False):
             self.achievements["first_blood"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Первый фраг!")
-        if game_time >= 60 and not self.achievements["survivor"]:
+        if game_time >= 60 and not self.achievements.get("survivor", False):
             self.achievements["survivor"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Выживший!")
-        if self.stats["shots_hit"] >= 10 and not self.achievements["sharpshooter"]:
+        if self.stats.get("shots_hit", 0) >= 10 and not self.achievements.get("sharpshooter", False):
             self.achievements["sharpshooter"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Меткий стрелок!")
-        if self.stats["enemies_killed"] >= 20 and not self.achievements["unstoppable"]:
+        if self.stats.get("enemies_killed", 0) >= 20 and not self.achievements.get("unstoppable", False):
             self.achievements["unstoppable"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Неостановим!")
-        if game_time >= 180 and not self.achievements["long_run"]:
+        if game_time >= 180 and not self.achievements.get("long_run", False):
             self.achievements["long_run"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Марафонец!")
-        if self.stats["survived_meteor"] and not self.achievements["meteor_survivor"]:
+        if self.stats.get("survived_meteor", False) and not self.achievements.get("meteor_survivor", False):
             self.achievements["meteor_survivor"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Пережить метеоритный дождь!")
-        if self.stats["survived_blackhole"] and not self.achievements["blackhole_escape"]:
+        if self.stats.get("survived_blackhole", False) and not self.achievements.get("blackhole_escape", False):
             self.achievements["blackhole_escape"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Выбраться из черной дыры!")
-        if self.stats["damage_taken"] == 0 and self.stats["levels_completed"] > 1 and not self.achievements["no_damage"]:
+        if self.stats.get("damage_taken", 0) == 0 and self.stats.get("levels_completed", 1) > 1 and not self.achievements.get("no_damage", False):
             self.achievements["no_damage"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Без единой царапины!")
-        if self.stats["bonuses_collected"] >= 10 and not self.achievements["bonus_collector"]:
+        if self.stats.get("bonuses_collected", 0) >= 10 and not self.achievements.get("bonus_collector", False):
             self.achievements["bonus_collector"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Коллекционер бонусов!")
-        if self.stats["tank_kills"] >= 5 and not self.achievements["tank_slayer"]:
+        if self.stats.get("tank_kills", 0) >= 5 and not self.achievements.get("tank_slayer", False):
             self.achievements["tank_slayer"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Убийца танков!")
-        if self.stats["fast_kills"] >= 10 and not self.achievements["fast_hunter"]:
+        if self.stats.get("fast_kills", 0) >= 10 and not self.achievements.get("fast_hunter", False):
             self.achievements["fast_hunter"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Охотник на быстрых!")
-        if self.stats["zigzag_kills"] >= 10 and not self.achievements["zigzag_master"]:
+        if self.stats.get("zigzag_kills", 0) >= 10 and not self.achievements.get("zigzag_master", False):
             self.achievements["zigzag_master"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Мастер зигзага!")
-        if self.stats["combo_counter"] >= 3 and not self.achievements["combo_killer"]:
+        if self.stats.get("combo_counter", 0) >= 3 and not self.achievements.get("combo_killer", False):
             self.achievements["combo_killer"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Комбо-киллер!")
-        if self.stats["shield_collected"] >= 5 and not self.achievements["shield_master"]:
+        if self.stats.get("shield_collected", 0) >= 5 and not self.achievements.get("shield_master", False):
             self.achievements["shield_master"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Мастер щита!")
-        if self.stats["heal_collected"] >= 5 and not self.achievements["heal_master"]:
+        if self.stats.get("heal_collected", 0) >= 5 and not self.achievements.get("heal_master", False):
             self.achievements["heal_master"] = True
             if achievement_sound: achievement_sound.play()
             self.show_popup("Достижение: Мастер лечения!")
+        # Моды могут добавить свои условия
 
     def show_popup(self, text, surface=None):
+        # Моды могут заменить этот метод для кастомных popup'ов
         self.popup_queue.append(text)
 
     def update_popups(self):
@@ -122,6 +129,7 @@ class Achievements:
         self.active_popups = [p for p in self.active_popups if p[1] > 0]
 
     def draw_popups(self, surface):
+        # Моды могут заменить этот метод для кастомных popup'ов
         font = pygame.font.SysFont("consolas", 36)
         base_y = self.config.height // 2 - 200
         for i, (text, timer) in enumerate(self.active_popups):
@@ -132,6 +140,7 @@ class Achievements:
             surface.blit(surf, rect)
 
     def draw_achievements(self, surface):
+        # Моды могут заменить этот метод для кастомного отображения достижений
         font = pygame.font.SysFont("consolas", 24)
         achv_names = {
             "first_blood": "Первый фраг",
@@ -163,14 +172,15 @@ class Achievements:
             y += 28
 
     def draw_stats(self, surface):
+        # Моды могут заменить этот метод для кастомного отображения статистики
         font = pygame.font.SysFont("consolas", 24)
         stats = [
-            f"Врагов убито: {self.stats['enemies_killed']}",
-            f"Выстрелов: {self.stats['shots_fired']}",
-            f"Попаданий: {self.stats['shots_hit']}",
-            f"Время: {self.stats['time_survived']} c",
-            f"Уровень: {self.stats['levels_completed']}",
-            f"Точность: {self.stats['shots_hit'] / self.stats['shots_fired'] * 100:.1f}%" if self.stats['shots_fired'] > 0 else "Точность: 0.0%"
+            f"Врагов убито: {self.stats.get('enemies_killed', 0)}",
+            f"Выстрелов: {self.stats.get('shots_fired', 0)}",
+            f"Попаданий: {self.stats.get('shots_hit', 0)}",
+            f"Время: {self.stats.get('time_survived', 0)} c",
+            f"Уровень: {self.stats.get('levels_completed', 1)}",
+            f"Точность: {self.stats['shots_hit'] / self.stats['shots_fired'] * 100:.1f}%" if self.stats.get('shots_fired', 0) > 0 else "Точность: 0.0%"
         ]
         x = self.config.width - 320
         y = 30
@@ -225,6 +235,18 @@ class Achievements:
             "shots_hit": 0,
             "time_survived": 0,
             "levels_completed": 1,
+            "bonuses_collected": 0,
+            "tank_kills": 0,
+            "fast_kills": 0,
+            "zigzag_kills": 0,
+            "shield_collected": 0,
+            "heal_collected": 0,
+            "damage_taken": 0,
+            "combo_counter": 0,
+            "combo_timer": 0,
+            "last_kill_time": 0,
+            "survived_meteor": False,
+            "survived_blackhole": False,
         }
         self.save()
         print("Progress reset and saved")

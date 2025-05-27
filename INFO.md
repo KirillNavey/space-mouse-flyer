@@ -3,7 +3,7 @@
 ## Header Information
 - **Encoding**: UTF-8
 - **Description**: Игра на Pygame, где игрок управляет мышью и стрелками, чтобы летать в космосе и стрелять по врагам.
-- **Author**: [netalant]
+- **Author**: [netalant] 
 - **Date**: [2025-05-27]
 - **License**: MIT License
 - **Requirements**: Pygame 2.0 or higher, Python 3.7 or higher

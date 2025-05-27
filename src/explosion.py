@@ -2,27 +2,31 @@ import pygame
 import random
 
 class Explosion:
-    def __init__(self, pos, color=(255, 200, 50), type="big"):
+    def __init__(self, pos, color=(255, 200, 50), type="big", **kwargs):
         self.pos = pygame.Vector2(pos)
         self.type = type
         self.color = color
         self.age = 0
+        # Моды могут задать свои параметры через kwargs
         if type == "big":
-            self.frames = 22
-            self.radius = 18 + random.randint(0, 8)
-            self.max_radius = self.radius + 38 + random.randint(0, 12)
+            self.frames = kwargs.get("frames", 22)
+            self.radius = kwargs.get("radius", 18 + random.randint(0, 8))
+            self.max_radius = kwargs.get("max_radius", self.radius + 38 + random.randint(0, 12))
         elif type == "small":
-            self.frames = 10
-            self.radius = 7 + random.randint(0, 3)
-            self.max_radius = self.radius + 12 + random.randint(0, 4)
+            self.frames = kwargs.get("frames", 10)
+            self.radius = kwargs.get("radius", 7 + random.randint(0, 3))
+            self.max_radius = kwargs.get("max_radius", self.radius + 12 + random.randint(0, 4))
         elif type == "hollow":
-            self.frames = 18
-            self.radius = 32
-            self.min_radius = 8
+            self.frames = kwargs.get("frames", 18)
+            self.radius = kwargs.get("radius", 32)
+            self.min_radius = kwargs.get("min_radius", 8)
         else:
-            self.frames = 16
-            self.radius = 12
-            self.max_radius = self.radius + 20
+            self.frames = kwargs.get("frames", 16)
+            self.radius = kwargs.get("radius", 12)
+            self.max_radius = kwargs.get("max_radius", self.radius + 20)
+        # Моды могут добавить любые новые поля через kwargs
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
     def update(self):
         self.age += 1

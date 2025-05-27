@@ -1,5 +1,17 @@
 import os
 
+USE_SPRITES = False  # Use sprites for the game objects
+''' - спрайт игрока player.png
+ - спрайт обычного врага enemy.png
+ - спрайт быстрого врага enemy_fast.png
+ - спрайт врага танка enemy_tank.png
+ - спрайт врага зигзага enemy_zigzag.png
+ - спрайт бонуса (используется в случае если спрайт специального бонуса не найден) bonus.png
+ - спрайт специального бонуса задается в зависимости от типа бонуса bonus_{bonus_type}.png
+ - спрайт бонуса лечения bonus_heal.png
+ - спрайт бонуса щита bonus_shield.png
+ - спрайт метеора meteor.png'''
+
 WHITE = (255, 255, 255) 
 BLUE = (50, 50, 255) 
 RED = (255, 50, 50) 
@@ -53,4 +65,5 @@ DIFFICULTY_LEVELS = [
 class GameConfig: 
     def __init__(self, width, height):
         self.width = width 
-        self.height = height 
+        self.height = height
+        # Моды могут добавить любые параметры сюда
