@@ -2,7 +2,7 @@ import pygame
 import random
 
 class Explosion:
-    def __init__(self, pos, color=(255, 200, 50), type="big", **kwargs):
+    def __init__(self, pos, color=(255, 200, 50), type="big", game_api=None, **kwargs):
         self.pos = pygame.Vector2(pos)
         self.type = type
         self.color = color
@@ -28,13 +28,16 @@ class Explosion:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    def update(self):
+    def update(self, game_api=None):
         self.age += 1
 
-    def is_alive(self):
+    def is_alive(self, game_api=None):
         return self.age < self.frames
 
-    def draw(self, surface, camera_pos, config):
+    def draw(self, surface, camera_pos, config, game_api=None):
+        # Позволяет модам полностью заменить отрисовку взрыва
+        if game_api and "draw_explosion" in game_api:
+            return game_api["draw_explosion"](self, surface, camera_pos, config)
         draw_pos = self.pos - camera_pos + pygame.Vector2(config.width // 2, config.height // 2)
         if self.type == "hollow":
             progress = self.age / self.frames

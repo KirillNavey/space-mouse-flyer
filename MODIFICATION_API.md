@@ -1,147 +1,146 @@
-# Space Mouse Flyer: Полный API для модификаций
-
-## Возможности модов
-
-Система модификаций Space Mouse Flyer позволяет модам:
-- **Заменять любые функции** (отрисовка, обработка событий, спавн врагов, урон, фон, меню и т.д.)
-- **Добавлять новые функции, обработчики, объекты и события**
-- **Изменять или расширять поведение и логику любых объектов**
-- **Заменять или добавлять спрайты, звуки, фон, эффекты**
-- **Вмешиваться в игровой цикл через on_tick**
-- **Добавлять новые переменные и методы к объектам**
-- **Полностью переписывать или расширять игровой процесс**
-- **Менять FPS, параметры сложности, структуру состояния, достижения, ресурсы и т.д.**
-
----
+# Space Mouse Flyer: Руководство по созданию модов
 
 ## Как работает система модов
 
-- Каждый мод — это Python-файл с функцией `apply_mod(game)`.
-- В функцию `apply_mod` передаётся объект `game` — это словарь со всеми основными объектами и функциями игры.
-- Мод может изменять, заменять или расширять любые функции и объекты через этот API.
-- Моды автоматически подгружаются из папки `mods/` при запуске игры.
+- Каждый мод — это отдельный Python-файл в папке `mods/`.
+- В каждом моде обязательно должна быть функция `apply_mod(game)`.
+- В функцию `apply_mod` передаётся объект `game` — это словарь со всеми основными объектами, функциями и классами игры.
+- Моды могут заменять, расширять или добавлять любые функции, классы, обработчики и параметры через этот объект.
+- Все функции ядра должны вызываться только через `game`, чтобы моды могли их переопределять.
 
 ---
 
 ## Структура объекта game
 
-В функцию `apply_mod(game)` передаётся словарь со следующими ключами:
+В функцию `apply_mod(game)` передаётся словарь с такими ключами:
 
-| Ключ                | Тип/Объект                | Описание                                                                                   |
-|---------------------|--------------------------|--------------------------------------------------------------------------------------------|
-| `player`            | Player                   | Игрок. Все его поля и методы можно изменять и расширять.                                   |
-| `state`             | dict                     | Глобальное состояние игры: все списки объектов, таймеры, очки, события и т.д.              |
-| `config`            | GameConfig               | Конфиг игры (размеры экрана, параметры, настройки).                                        |
-| `camera`            | Camera                   | Камера (позиция, методы движения, тряска и т.д.).                                          |
-| `sounds`            | dict                     | Словарь всех игровых звуков. Ключи: `"shoot"`, `"hit"`, `"bonus"`, `"player_hit"`, ...     |
-| `achievements`      | Achievements             | Объект достижений, можно читать/менять статистику и вызывать методы.                       |
-| `screen`            | pygame.Surface           | Главный экран для отрисовки.                                                               |
-| `on_tick`           | list[callable]           | Список функций, вызываемых каждый кадр (можно добавлять свои обработчики).                 |
-| `fps`               | list[int]                | FPS игры (изменяемый контейнер, например: `game["set_fps"](144)`).                         |
-| `set_fps`           | function                 | Функция для изменения FPS: `game["set_fps"](144)`.                                         |
-| `add_enemy`         | function                 | Функция для добавления врага: `add_enemy(enemy_obj)`                                       |
-| `add_bonus`         | function                 | Функция для добавления бонуса: `add_bonus(bonus_obj)`                                      |
-| `add_bullet`        | function                 | Функция для добавления пули игрока: `add_bullet(bullet_obj)`                               |
-| `add_enemy_bullet`  | function                 | Функция для добавления пули врага: `add_enemy_bullet(bullet_obj)`                          |
-| `remove_enemy`      | function                 | Удалить врага из state                                                                     |
-| `remove_bullet`     | function                 | Удалить пулю игрока из state                                                               |
-| `remove_enemy_bullet`| function                | Удалить пулю врага из state                                                                |
-| `remove_bonus`      | function                 | Удалить бонус из state                                                                     |
-| `spawn_enemy`       | function                 | Спавн врага: `spawn_enemy(pos, etype="default")`                                           |
-| `spawn_bonus`       | function                 | Спавн бонуса: `spawn_bonus(pos, btype=None)`                                               |
-| `spawn_explosion`   | function                 | Спавн взрыва: `spawn_explosion(pos, color, type)`                                          |
-| `give_damage`       | function                 | Нанести урон игроку: `give_damage(amount=1, source=None)`                                  |
-| `heal_player`       | function                 | Вылечить игрока                                                                            |
-| `set_game_state`    | function                 | Сменить состояние игры (например, "menu", "game", "pause", "dead")                         |
-| `get_game_state`    | function                 | Получить текущее состояние игры                                                            |
-| `set_score`         | function                 | Установить счёт                                                                            |
-| `get_score`         | function                 | Получить счёт                                                                              |
-| `set_level`         | function                 | Установить уровень                                                                         |
-| `get_level`         | function                 | Получить уровень                                                                           |
-| **Функции ядра**    | function                 | Все функции ядра можно заменить: см. ниже                                                  |
-| **Классы ядра**     | class                    | Все классы ядра можно заменить: см. ниже                                                   |
+| Ключ                | Описание                                                                                   |
+|---------------------|--------------------------------------------------------------------------------------------|
+| `player`            | Игрок (объект класса Player)                                                               |
+| `state`             | Глобальное состояние игры (словарь с объектами, списками, таймерами и т.д.)                |
+| `config`            | Конфиг игры (размеры экрана, параметры, настройки)                                         |
+| `camera`            | Камера (позиция, методы движения, тряска и т.д.)                                           |
+| `sounds`            | Словарь всех игровых звуков                                                                |
+| `achievements`      | Объект достижений                                                                          |
+| `screen`            | Главный экран для отрисовки                                                                |
+| `on_tick`           | Список функций, вызываемых каждый кадр (можно добавлять свои обработчики)                  |
+| `fps`               | FPS игры (изменяемый контейнер, например: `game["set_fps"](120)`)                          |
+| `set_fps`           | Функция для изменения FPS                                                                  |
+| ...                 | Все функции и классы ядра, которые можно заменить (см. ниже)                               |
 
 **Функции ядра (можно заменить своей):**
 - `draw_game`
 - `handle_events`
-- `handle_player_shoot`
-- `spawn_enemy_func`
-- `handle_bullet_enemy_collisions`
-- `handle_enemy_bullet_player_collisions`
-- `handle_bonuses`
-- `handle_explosions`
-- `draw_background`
-- `draw_enemy_indicators`
 - `draw_lives`
-- `draw_menu`
+- `draw_background`
 - `menu_loop`
-- `select_difficulty`
-- `draw_event_banner`
-- `reset_game_state`
+- и другие (см. исходный код)
 
 **Классы ядра (можно заменить своей реализацией):**
 - `Player`
 - `Enemy`
 - `Bonus`
-- `Explosion`
-- `Meteor`
-- `BlackHole`
-- `Bullet`
-- `Camera`
-
-**Если вы хотите добавить новый ключ — просто добавьте его в объект game в своём моде или в ядре игры!**
+- и другие
 
 ---
 
-## Структура state
+## Примеры: как писать моды
 
-В `game["state"]` доступны все игровые списки и переменные:
+### 1. Минимальный мод
 
-- `"player"`: объект игрока
-- `"camera"`: объект камеры
-- `"enemies"`: список врагов
-- `"bullets"`: список пуль игрока
-- `"enemy_bullets"`: список пуль врагов
-- `"bonuses"`: список бонусов
-- `"explosions"`: список взрывов
-- `"meteors"`: список метеоров
-- `"blackholes"`: список чёрных дыр
-- `"score"`: текущий счёт
-- `"level"`: текущий уровень
-- `"game_time"`: время игры
-- ...и любые другие переменные, которые вы добавите
-
----
-
-## Как заменить любую функцию
-
-**Пример: заменить фон на изображение**
 ```python
-import pygame
-import os
-
-def my_bg(surface, camera_pos, config):
-    bg_path = os.path.join(os.path.dirname(__file__), "my_bg.jpg")
-    if not hasattr(my_bg, "img"):
-        if os.path.exists(bg_path):
-            my_bg.img = pygame.image.load(bg_path).convert()
-            my_bg.img = pygame.transform.scale(my_bg.img, (config.width, config.height))
-        else:
-            my_bg.img = None
-    if my_bg.img:
-        surface.blit(my_bg.img, (0, 0))
-    else:
-        surface.fill((0, 0, 0))
-
 def apply_mod(game):
-    game["draw_background"] = my_bg
+    print("Мой мод успешно загружен!")
 ```
 
 ---
 
-## Как заменить звук или спрайт
+### 2. Как заменить функцию ядра (например, отрисовку жизней)
 
-**Пример: заменить звук выстрела**
+```python
+import pygame
+
+def draw_hearts(screen, lives, config, game_api=None):
+    n = game_api["settings"]["PLAYER_LIVES"]
+    for i in range(n):
+        x = config.width - 24 - 42*i
+        y = 40
+        color = (255,80,120) if i < lives else (80,80,80)
+        heart = pygame.Surface((32,32), pygame.SRCALPHA)
+        pygame.draw.circle(heart, color, (11,12), 9)
+        pygame.draw.circle(heart, color, (21,12), 9)
+        pygame.draw.polygon(heart, color, [(6,18),(16,29),(26,18)])
+        pygame.draw.circle(heart, (255,255,255,120), (16,16), 15, 2)
+        screen.blit(heart, (x-16, y-16))
+
+def apply_mod(game):
+    game["draw_lives"] = draw_hearts
+```
+
+---
+
+### 3. Как заменить класс (например, сделать врага с новым поведением)
+
+```python
+from enemy import Enemy
+
+class SlowEnemy(Enemy):
+    def update(self, player_pos, enemy_bullets, camera_pos, game_api=None):
+        # Враг двигается медленно и не стреляет
+        direction = (player_pos - self.pos)
+        if direction.length() > 1:
+            self.pos += direction.normalize() * 0.5
+
+def apply_mod(game):
+    game["Enemy"] = SlowEnemy
+```
+
+---
+
+### 4. Как изменить или расширить логику объекта (например, добавить прыжок игроку)
+
+```python
+import pygame
+
+def player_update_with_jump(self):
+    keys = pygame.key.get_pressed()
+    if not hasattr(self, "jump_vel"):
+        self.jump_vel = 0
+        self.is_jumping = False
+    if keys[pygame.K_SPACE] and not self.is_jumping:
+        self.is_jumping = True
+        self.jump_vel = -15
+    if self.is_jumping:
+        self.pos.y += self.jump_vel
+        self.jump_vel += 1
+        if self.pos.y >= self.config.height // 2:
+            self.pos.y = self.config.height // 2
+            self.is_jumping = False
+            self.jump_vel = 0
+    # Можно добавить вызов оригинального update, если нужно
+
+def apply_mod(game):
+    game["player"].update = lambda: player_update_with_jump(game["player"])
+```
+
+---
+
+### 5. Как заменить или добавить спрайт
+
+```python
+import pygame
+import os
+
+def apply_mod(game):
+    sprite_path = os.path.join(os.path.dirname(__file__), "my_player.png")
+    if os.path.exists(sprite_path):
+        game["player"].sprite = pygame.image.load(sprite_path).convert_alpha()
+```
+
+---
+
+### 6. Как заменить звук
+
 ```python
 import pygame
 import os
@@ -152,87 +151,36 @@ def apply_mod(game):
         game["sounds"]["shoot"] = pygame.mixer.Sound(new_sound)
 ```
 
-**Пример: заменить спрайт игрока**
+---
+
+### 7. Как вмешаться в игровой цикл (on_tick)
+
 ```python
-import pygame
-import os
+def print_score_tick(game):
+    print("Текущий счёт:", game["state"]["score"])
 
 def apply_mod(game):
-    sprite_path = os.path.join(os.path.dirname(__file__), "new_player.png")
-    if os.path.exists(sprite_path):
-        game["player"].sprite = pygame.image.load(sprite_path).convert_alpha()
+    game["on_tick"].append(lambda: print_score_tick(game))
 ```
 
 ---
 
-## Как добавить новую механику (например, прыжок)
+### 8. Как добавить новую переменную или метод к объекту
 
 ```python
-import pygame
-
-def jump_event_handler(game):
-    events = pygame.event.get(pygame.KEYDOWN)
-    for event in events:
-        if event.key == pygame.K_SPACE and not getattr(game["player"], "is_jumping", False):
-            game["player"].is_jumping = True
-            game["player"].jump_vel = -18
-
-def jump_physics(game):
-    player = game["player"]
-    if getattr(player, "is_jumping", False):
-        player.pos.y += player.jump_vel
-        player.jump_vel += 1
-        if player.pos.y >= player.config.height // 2:
-            player.pos.y = player.config.height // 2
-            player.is_jumping = False
-            player.jump_vel = 0
-
 def apply_mod(game):
-    player = game["player"]
-    player.is_jumping = False
-    player.jump_vel = 0
-    game["on_tick"].append(lambda: jump_event_handler(game))
-    game["on_tick"].append(lambda: jump_physics(game))
+    game["player"].is_super = True
+    def super_attack(self):
+        print("Суператака!")
+    game["player"].super_attack = super_attack.__get__(game["player"])
 ```
 
 ---
 
-## Как добавить нового врага
+### 9. Как полностью переписать игровой процесс (например, сделать игрока бессмертным)
 
 ```python
-from enemy import Enemy
-import pygame
-
-class RainbowEnemy(Enemy):
-    def __init__(self, pos, config):
-        super().__init__(pos, config, "default")
-        self.color_phase = 0
-
-    def update(self, player_pos, enemy_bullets, camera_pos):
-        super().update(player_pos, enemy_bullets, camera_pos)
-        self.color_phase += 0.1
-
-    def draw(self, surface, camera_pos):
-        import math
-        draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
-        color = (
-            int(127 + 128 * math.sin(self.color_phase)),
-            int(127 + 128 * math.sin(self.color_phase + 2)),
-            int(127 + 128 * math.sin(self.color_phase + 4))
-        )
-        pygame.draw.circle(surface, color, (int(draw_pos.x), int(draw_pos.y)), self.radius)
-
-def apply_mod(game):
-    game["add_enemy"](RainbowEnemy(game["player"].pos + pygame.Vector2(300, 0), game["config"]))
-```
-
----
-
-## Как изменить игровую логику
-
-**Пример: сделать игрока бессмертным**
-```python
-def immortal_damage(*args, **kwargs):
+def immortal_damage(amount=1, source=None):
     print("Игрок бессмертен!")
 
 def apply_mod(game):
@@ -241,87 +189,55 @@ def apply_mod(game):
 
 ---
 
-## Как добавить обработчик, вызываемый каждый кадр
+### 10. Как изменить FPS
 
 ```python
-def my_tick(game):
-    # Например, увеличить скорость игрока
-    game["player"].vel *= 1.05
-
 def apply_mod(game):
-    game["on_tick"].append(lambda: my_tick(game))
+    game["set_fps"](30)  # Ограничить игру 30 кадрами в секунду
 ```
 
 ---
 
-## Как изменить FPS
+### 11. Как добавить свой обработчик событий
 
 ```python
+import pygame
+
+def my_event_handler(state, achievements, game_api=None):
+    for event in pygame.event.get():
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_h:
+            print("Вы нажали H!")
+    # Можно вызвать оригинальный обработчик, если нужно:
+    # return game_api["handle_events"](state, achievements, game_api)
+
 def apply_mod(game):
-    game["set_fps"](144)  # Теперь игра будет работать на 144 FPS
+    game["handle_events"] = my_event_handler
 ```
 
 ---
 
-## Как изменить достижения
+### 12. Как добавить новый эффект или механику
 
-**Добавить новое достижение:**
 ```python
-def apply_mod(game):
-    ach = game["achievements"]
-    ach.achievements["snake_master"] = False
-    def new_check(*args, **kwargs):
-        Achievements.check(ach, *args, **kwargs)
-        if ach.stats.get("snake_score", 0) >= 10 and not ach.achievements["snake_master"]:
-            ach.achievements["snake_master"] = True
-            ach.show_popup("Достижение: Змеиный мастер!")
-    ach.check = new_check
-```
-
-**Полностью заменить систему достижений:**
-```python
-class MyAchievements:
-    def __init__(self, config):
-        self.achievements = {"mod_ach": False}
-        self.stats = {}
-    def check(self, *a, **kw):
-        if not self.achievements["mod_ach"]:
-            self.achievements["mod_ach"] = True
-            print("Модовое достижение!")
-    def show_popup(self, text):
-        print("POPUP:", text)
-    def draw_stats(self, screen): pass
-    def draw_achievements(self, screen): pass
-    def update_popups(self): pass
-    def draw_popups(self, screen): pass
+def speed_boost_tick(game):
+    player = game["player"]
+    if not hasattr(player, "boost"):
+        player.boost = 1.0
+    player.vel *= player.boost
 
 def apply_mod(game):
-    game["achievements"] = MyAchievements(game["config"])
+    game["player"].boost = 2.0
+    game["on_tick"].append(lambda: speed_boost_tick(game))
 ```
 
 ---
 
-## Как получить доступ к любому объекту или функции
-
-Всё, что есть в `game` и `state`, доступно для модификации.  
-Вы можете:
-- Добавлять новые переменные к объектам (например, `player.is_jumping = True`)
-- Заменять методы объектов (например, `player.update = my_update`)
-- Добавлять свои обработчики событий, физики, отрисовки и т.д.
-- Заменять любые функции ядра (отрисовка, обработка событий, спавн, урон и т.д.)
-- Заменять или расширять любые классы (Player, Enemy, Bonus, ...)
-
----
-
-## Как добавить свои параметры или объекты
-
-Вы можете добавить любые новые ключи в `game`, `state`, `config` или свои классы:
+### 13. Как добавить новый ключ в game или state
 
 ```python
 def apply_mod(game):
     game["my_param"] = 42
     game["state"]["my_list"] = []
-    game["config"].my_setting = True
 ```
 
 ---
@@ -345,12 +261,8 @@ def apply_mod(game):
 
 ---
 
-**Пример минимального мода:**
+**Минимальный пример:**
 ```python
 def apply_mod(game):
-    print("Мой мод загружен!")
+    print("Мод загружен!")
 ```
-
----
-
-**Если вы не нашли нужный пример — спросите, и мы добавим его в документацию!**

@@ -28,7 +28,7 @@ class Player:
                 self.sprite = pygame.image.load(os.path.join(ASSETS_PATH, "player.png")).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (40, 40))
             except Exception as e:
-                print("Не удалось загрузить спрайт игрока:", e)
+                # print("Не удалось загрузить спрайт игрока:", e)
                 self.sprite = None
         self.effects = kwargs.get("effects", {})  # {"shield": ticks_left, ...}
         # Моды могут добавить любые новые поля через kwargs
@@ -95,7 +95,10 @@ class Player:
         self.image_orig.fill((0, 0, 0, 0))
         pygame.draw.polygon(self.image_orig, self.color, [(20, 0), (40, 40), (20, 30), (0, 40)])
 
-    def draw(self, surface, camera_pos, mouse_pos):
+    def draw(self, surface, camera_pos, mouse_pos, game_api=None):
+        # Используем функцию ядра для кастомной отрисовки, если она есть
+        if game_api and "draw_player" in game_api:
+            return game_api["draw_player"](self, surface, camera_pos, mouse_pos)
         draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
         mouse_world = camera_pos + pygame.Vector2(mouse_pos) - pygame.Vector2(self.config.width // 2, self.config.height // 2)
         offset = mouse_world - self.pos

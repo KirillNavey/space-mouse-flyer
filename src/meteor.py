@@ -27,7 +27,7 @@ class Meteor:
                 self.sprite = pygame.image.load(os.path.join(ASSETS_PATH, "meteor.png")).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (self.radius*2, self.radius*2))
             except Exception as e:
-                print("Не удалось загрузить спрайт метеорита:", e)
+                # print("Не удалось загрузить спрайт метеорита:", e)
                 self.sprite = None
 
     def update(self):
@@ -38,7 +38,10 @@ class Meteor:
     def is_alive(self):
         return self.age < self.lifetime and self.pos.y - self.radius < self.config.height + 1000
 
-    def draw(self, surface, camera_pos):
+    def draw(self, surface, camera_pos, game_api=None):
+        # Используем функцию ядра для кастомной отрисовки, если она есть
+        if game_api and "draw_meteor" in game_api:
+            return game_api["draw_meteor"](self, surface, camera_pos)
         draw_x = self.pos.x - camera_pos.x + self.config.width // 2
         draw_y = self.pos.y - camera_pos.y + self.config.height // 2
         if USE_SPRITES and self.sprite:

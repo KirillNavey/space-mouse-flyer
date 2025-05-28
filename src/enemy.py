@@ -15,7 +15,7 @@ ENEMY_TYPES = {
 }
 
 class Enemy:
-    def __init__(self, pos, config, enemy_type="default", **kwargs):
+    def __init__(self, pos, config, enemy_type="default", game_api=None, **kwargs):
         self.pos = pygame.Vector2(pos)
         self.vel = pygame.Vector2(0, 0)
         self.config = config
@@ -34,7 +34,7 @@ class Enemy:
                 self.sprite = pygame.image.load(os.path.join(ASSETS_PATH, fname)).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (self.radius*2, self.radius*2))
             except Exception as e:
-                print("Не удалось загрузить спрайт врага:", e)
+                # print("Не удалось загрузить спрайт врага:", e)
                 self.sprite = None
         # Спец. параметры
         if self.type == "zigzag":
@@ -49,7 +49,10 @@ class Enemy:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    def update(self, player_pos, enemy_bullets, camera_pos):
+    def update(self, player_pos, enemy_bullets, camera_pos, game_api=None):
+        # Позволяет модам полностью заменить поведение врага
+        if game_api and "update_enemy" in game_api:
+            return game_api["update_enemy"](self, player_pos, enemy_bullets, camera_pos, game_api)
         to_player = player_pos - self.pos
         distance = to_player.length()
         if distance > 1:
@@ -83,7 +86,10 @@ class Enemy:
         if self.invuln_timer > 0:
             self.invuln_timer -= 1
 
-    def is_hit(self, bullet):
+    def is_hit(self, bullet, game_api=None):
+        # Позволяет модам полностью заменить обработку попадания
+        if game_api and "enemy_is_hit" in game_api:
+            return game_api["enemy_is_hit"](self, bullet, game_api)
         hit = self.pos.distance_to(bullet.pos) < (self.radius + 5)
         if not hit:
             return False
@@ -97,7 +103,10 @@ class Enemy:
             self.hp -= 1
             return self.hp <= 0
 
-    def draw(self, surface, camera_pos):
+    def draw(self, surface, camera_pos, game_api=None):
+        # Позволяет модам полностью заменить отрисовку врага
+        if game_api and "draw_enemy" in game_api:
+            return game_api["draw_enemy"](self, surface, camera_pos, game_api)
         draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
         alpha = 255
         if self.invuln_timer > 0:

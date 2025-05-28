@@ -1,28 +1,28 @@
-import pygame 
+import pygame
 import os
 import json
-from settings import * 
+from settings import *
 
 class Achievements:
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, game_api=None, **kwargs):
         self.config = config
         # Моды могут расширять/заменять список достижений через kwargs
         self.achievements = kwargs.get("achievements", {
-            "first_blood": False,       
-            "survivor": False,          
-            "sharpshooter": False,      
-            "unstoppable": False,        
-            "long_run": False,          
-            "meteor_survivor": False,     
-            "blackhole_escape": False,     
-            "no_damage": False,          
-            "bonus_collector": False,      
-            "tank_slayer": False,           
-            "fast_hunter": False,           
-            "zigzag_master": False,         
-            "combo_killer": False,          
-            "shield_master": False,         
-            "heal_master": False,           
+            "first_blood": False,
+            "survivor": False,
+            "sharpshooter": False,
+            "unstoppable": False,
+            "long_run": False,
+            "meteor_survivor": False,
+            "blackhole_escape": False,
+            "no_damage": False,
+            "bonus_collector": False,
+            "tank_slayer": False,
+            "fast_hunter": False,
+            "zigzag_master": False,
+            "combo_killer": False,
+            "shield_master": False,
+            "heal_master": False,
         })
         self.stats = kwargs.get("stats", {
             "enemies_killed": 0,
@@ -52,8 +52,19 @@ class Achievements:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
-    def check(self, score, game_time, player, surface, achievement_sound=None):
+        # Позволяет модам заменить методы через game_api
+        if game_api:
+            game_api["draw_achievements"] = self.draw_achievements
+            game_api["draw_stats"] = self.draw_stats
+            game_api["draw_popups"] = self.draw_popups
+            game_api["update_popups"] = self.update_popups
+            game_api["show_popup"] = self.show_popup
+            game_api["check_achievements"] = self.check
+
+    def check(self, score, game_time, player, surface, achievement_sound=None, game_api=None):
         # Моды могут заменить этот метод или расширить его через наследование
+        if game_api and "check_achievements" in game_api and game_api["check_achievements"] is not self.check:
+            return game_api["check_achievements"](score, game_time, player, surface, achievement_sound, game_api)
         if score >= 1 and not self.achievements.get("first_blood", False):
             self.achievements["first_blood"] = True
             if achievement_sound: achievement_sound.play()
@@ -116,11 +127,15 @@ class Achievements:
             self.show_popup("Достижение: Мастер лечения!")
         # Моды могут добавить свои условия
 
-    def show_popup(self, text, surface=None):
+    def show_popup(self, text, surface=None, game_api=None):
         # Моды могут заменить этот метод для кастомных popup'ов
+        if game_api and "show_popup" in game_api and game_api["show_popup"] is not self.show_popup:
+            return game_api["show_popup"](text, surface, game_api)
         self.popup_queue.append(text)
 
-    def update_popups(self):
+    def update_popups(self, game_api=None):
+        if game_api and "update_popups" in game_api and game_api["update_popups"] is not self.update_popups:
+            return game_api["update_popups"](game_api)
         while self.popup_queue and len(self.active_popups) < 3:
             text = self.popup_queue.pop(0)
             self.active_popups.append([text, self.POPUP_TIME])
@@ -128,8 +143,9 @@ class Achievements:
             popup[1] -= 1
         self.active_popups = [p for p in self.active_popups if p[1] > 0]
 
-    def draw_popups(self, surface):
-        # Моды могут заменить этот метод для кастомных popup'ов
+    def draw_popups(self, surface, game_api=None):
+        if game_api and "draw_popups" in game_api and game_api["draw_popups"] is not self.draw_popups:
+            return game_api["draw_popups"](surface, game_api)
         font = pygame.font.SysFont("consolas", 36)
         base_y = self.config.height // 2 - 200
         for i, (text, timer) in enumerate(self.active_popups):
@@ -139,8 +155,9 @@ class Achievements:
             rect = surf.get_rect(center=(self.config.width // 2, base_y + i * 60))
             surface.blit(surf, rect)
 
-    def draw_achievements(self, surface):
-        # Моды могут заменить этот метод для кастомного отображения достижений
+    def draw_achievements(self, surface, game_api=None):
+        if game_api and "draw_achievements" in game_api and game_api["draw_achievements"] is not self.draw_achievements:
+            return game_api["draw_achievements"](surface, game_api)
         font = pygame.font.SysFont("consolas", 24)
         achv_names = {
             "first_blood": "Первый фраг",
@@ -171,8 +188,9 @@ class Achievements:
             surface.blit(surf, (x, y))
             y += 28
 
-    def draw_stats(self, surface):
-        # Моды могут заменить этот метод для кастомного отображения статистики
+    def draw_stats(self, surface, game_api=None):
+        if game_api and "draw_stats" in game_api and game_api["draw_stats"] is not self.draw_stats:
+            return game_api["draw_stats"](surface, game_api)
         font = pygame.font.SysFont("consolas", 24)
         stats = [
             f"Врагов убито: {self.stats.get('enemies_killed', 0)}",
@@ -193,7 +211,7 @@ class Achievements:
             y += 28
 
     def save(self):
-        data = { 
+        data = {
             "achievements": self.achievements,
             "stats": self.stats,
         }
@@ -223,7 +241,7 @@ class Achievements:
                 print(f"No save file found at {SAVE_FILE}, using default progress")
         except json.JSONDecodeError as e:
             print(f"Failed to parse save file {SAVE_FILE}: {e}, using default progress")
-        except Exception as e: 
+        except Exception as e:
             print(f"Failed to load progress: {e}, using default progress")
 
     def reset(self):

@@ -6,11 +6,11 @@ from settings import *
 ASSETS_PATH = os.path.join(os.path.dirname(__file__), "..", "assets")
 
 class BlackHole:
-    def __init__(self, pos, config, **kwargs):
+    def __init__(self, pos, config, game_api=None, **kwargs):
         self.pos = pygame.Vector2(pos)
         self.config = config
         self.radius = kwargs.get("radius", 100)
-        self.strength = kwargs.get("strength", 0.5)
+        self.strength = kwargs.get("strength", 1.2)
         self.age = 0
         self.max_age = kwargs.get("max_age", 900)
         self.sprite = kwargs.get("sprite", None)
@@ -22,23 +22,29 @@ class BlackHole:
                 self.sprite = pygame.image.load(os.path.join(ASSETS_PATH, "blackhole.png")).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (self.radius*2, self.radius*2))
             except Exception as e:
-                print("Не удалось загрузить спрайт черной дыры:", e)
+                # print("Не удалось загрузить спрайт черной дыры:", e)
                 self.sprite = None
 
-    def update(self):
+    def update(self, game_api=None):
         self.age += 1
 
-    def is_alive(self):
+    def is_alive(self, game_api=None):
         return self.age < self.max_age
 
-    def attract(self, obj):
+    def attract(self, obj, game_api=None):
+        # Позволяет модам полностью заменить поведение притяжения
+        if game_api and "blackhole_attract" in game_api:
+            return game_api["blackhole_attract"](self, obj, game_api)
         direction = self.pos - obj.pos
         dist = direction.length()
         if dist < self.radius * 6:
             force = self.strength * min(1, self.radius * 2 / max(dist, 1))
             obj.vel += direction.normalize() * force
 
-    def draw(self, surface, camera_pos):
+    def draw(self, surface, camera_pos, game_api=None):
+        # Позволяет модам полностью заменить отрисовку чёрной дыры
+        if game_api and "draw_blackhole" in game_api:
+            return game_api["draw_blackhole"](self, surface, camera_pos, game_api)
         draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
         if USE_SPRITES and self.sprite:
             rect = self.sprite.get_rect(center=draw_pos)

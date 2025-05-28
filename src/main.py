@@ -14,6 +14,7 @@ from meteor import Meteor
 from blackhole import BlackHole
 from camera import Camera
 import utils
+import settings
 from settings import *
 
 import importlib.util
@@ -119,6 +120,7 @@ def main():
         "on_tick": on_tick,
         "fps": fps,
         "set_fps": lambda val: fps.__setitem__(0, val),
+        "settings": {k: getattr(settings, k) for k in dir(settings) if not k.startswith("__")},
         "add_enemy": lambda obj: state["enemies"].append(obj),
         "add_bonus": lambda obj: state["bonuses"].append(obj),
         "add_bullet": lambda obj: state["bullets"].append(obj),
@@ -180,6 +182,9 @@ def main():
     state["current_event_name"] = ""
     state["current_event_timer"] = 0
 
+    gameplay_time = 0.0
+    gameplay_time_start = None
+
     while True:
         # --- Меню ---
         if game_state == "menu":
@@ -195,7 +200,7 @@ def main():
             ], config, achievements)
             if menu_result == "start":
                 current_difficulty = get_func("select_difficulty")(screen, config, current_difficulty)
-                state = reset_game_state(current_difficulty, game_api)
+                state = get_func("reset_game_state")(current_difficulty, game_api)
                 game_api["state"] = state
                 game_api["player"] = state["player"]
                 game_api["camera"] = state["camera"]
@@ -265,10 +270,17 @@ def main():
 
         # --- Стандартная логика (если не заменена модом) ---
         if get_func("handle_events") == utils.handle_events:
-            state["player"].update()
-            state["camera"].update(state["player"].pos)
-            state["game_time"] += clock.get_time() / 1000
-            achievements.stats["time_survived"] = int(state["game_time"])
+            if game_state == "game":
+                if gameplay_time_start is None:
+                    gameplay_time_start = pygame.time.get_ticks()
+                state["player"].update()
+                state["camera"].update(state["player"].pos)
+                state["game_time"] = gameplay_time + (pygame.time.get_ticks() - gameplay_time_start) / 1000
+                achievements.stats["time_survived"] = int(state["game_time"])
+            else:
+                if gameplay_time_start is not None:
+                    gameplay_time += (pygame.time.get_ticks() - gameplay_time_start) / 1000
+                    gameplay_time_start = None
 
             # Уровень и сложность
             if achievements.stats["enemies_killed"] >= state["kills_for_next_level"]:
@@ -319,7 +331,7 @@ def main():
                 continue
 
         # --- Рисование (может быть заменено модом) ---
-        get_func("draw_game")(state, achievements, screen, config)
+        get_func("draw_game")(state, achievements, screen, config, game_api)
         clock.tick(game_api["fps"][0])
 
 if __name__ == "__main__":

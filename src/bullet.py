@@ -5,7 +5,7 @@ from settings import *
 ASSETS_PATH = os.path.join(os.path.dirname(__file__), "..", "assets")
 
 class Bullet:
-    def __init__(self, pos, velocity, speed, color, lifetime, config, is_enemy=False, **kwargs):
+    def __init__(self, pos, velocity, speed, color, lifetime, config, is_enemy=False, game_api=None, **kwargs):
         self.pos = pygame.Vector2(pos)
         self.dir = velocity.normalize()
         self.speed = speed
@@ -25,14 +25,17 @@ class Bullet:
                 self.sprite = pygame.image.load(os.path.join(ASSETS_PATH, fname)).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (18, 18))
             except Exception as e:
-                print("Не удалось загрузить спрайт пули:", e)
+                # print("Не удалось загрузить спрайт пули:", e)
                 self.sprite = None
 
-    def update(self):
+    def update(self, game_api=None):
         self.pos += self.dir * self.speed
         self.age += 1
 
-    def draw(self, surface, camera_pos):
+    def draw(self, surface, camera_pos, game_api=None):
+        # Позволяет модам полностью заменить отрисовку пули
+        if game_api and "draw_bullet" in game_api:
+            return game_api["draw_bullet"](self, surface, camera_pos, game_api)
         draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
         if USE_SPRITES and self.sprite:
             angle = -self.dir.angle_to(pygame.Vector2(0, -1))
@@ -42,5 +45,5 @@ class Bullet:
         else:
             pygame.draw.circle(surface, self.color, (int(draw_pos.x), int(draw_pos.y)), self.radius)
 
-    def is_alive(self):
+    def is_alive(self, game_api=None):
         return self.age < self.lifetime

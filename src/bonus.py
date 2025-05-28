@@ -8,7 +8,7 @@ ASSETS_PATH = os.path.join(os.path.dirname(__file__), "..", "assets")
 BONUS_TYPES = ["heal", "shield"]
 
 class Bonus:
-    def __init__(self, pos, config, bonus_type=None, **kwargs):
+    def __init__(self, pos, config, bonus_type=None, game_api=None, **kwargs):
         self.pos = pygame.Vector2(pos)
         self.radius = kwargs.get("radius", 18)
         self.type = bonus_type if bonus_type else kwargs.get("type", random.choice(BONUS_TYPES))
@@ -28,10 +28,10 @@ class Bonus:
                 self.sprite = pygame.image.load(path).convert_alpha()
                 self.sprite = pygame.transform.smoothscale(self.sprite, (self.radius*2, self.radius*2))
             except Exception as e:
-                print("Не удалось загрузить спрайт бонуса:", e)
+                # print("Не удалось загрузить спрайт бонуса:", e)
                 self.sprite = None
 
-    def update(self, player=None):
+    def update(self, player=None, game_api=None):
         self.lifetime -= 1
         if player:
             dist = self.pos.distance_to(player.pos)
@@ -44,10 +44,13 @@ class Bonus:
                     self.pos += direction * strength
         self.pulse_phase += 0.18
 
-    def is_alive(self):
+    def is_alive(self, game_api=None):
         return self.lifetime > 0
 
-    def draw(self, surface, camera_pos, player=None):
+    def draw(self, surface, camera_pos, player=None, game_api=None):
+        # Позволяет модам полностью заменить отрисовку бонуса
+        if game_api and "draw_bonus" in game_api:
+            return game_api["draw_bonus"](self, surface, camera_pos, player, game_api)
         draw_pos = self.pos - camera_pos + pygame.Vector2(self.config.width // 2, self.config.height // 2)
         pulse = 1.0
         if player:

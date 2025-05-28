@@ -1,61 +1,69 @@
-import pygame 
-import random 
-import math 
-import sys 
-from settings import * 
+import pygame
+import random
+import math
+import sys
+from settings import *
 
-def draw_background(surface, camera_pos, config):
-    surface.fill((10, 10, 30)) 
-    parallax_layers = [ 
-        (0.2, 80), 
-        (0.4, 60), 
-        (0.6, 40), 
-        (0.8, 30), 
-        (0.95, 20) 
+def draw_background(surface, camera_pos, config, game_api=None):
+    # Позволяет модам полностью заменить фон
+    if game_api and "draw_background" in game_api and game_api["draw_background"] is not draw_background:
+        return game_api["draw_background"](surface, camera_pos, config, game_api)
+    surface.fill((10, 10, 30))
+    parallax_layers = [
+        (0.2, 80),
+        (0.4, 60),
+        (0.6, 40),
+        (0.8, 30),
+        (0.95, 20)
     ]
-    for layer, num_stars in parallax_layers: 
-        rng = random.Random(int(layer * 10000)) 
-        for i in range(num_stars): 
-            star_seed = int(layer * 10000) + i 
-            star_rng = random.Random(star_seed) 
-            star_x = star_rng.uniform(0, config.width) 
-            star_y = star_rng.uniform(0, config.height) 
-            scolor = star_rng.choice(STAR_COLORS) 
-            sradius = star_rng.randint(1, 2 if layer < 0.7 else 3) 
-            offset_x = (camera_pos.x * (1 - layer)) % config.width 
-            offset_y = (camera_pos.y * (1 - layer)) % config.height 
-            screen_x = (star_x - offset_x) % config.width 
-            screen_y = (star_y - offset_y) % config.height 
-            pygame.draw.circle(surface, scolor, (int(screen_x), int(screen_y)), sradius) 
+    for layer, num_stars in parallax_layers:
+        rng = random.Random(int(layer * 10000))
+        for i in range(num_stars):
+            star_seed = int(layer * 10000) + i
+            star_rng = random.Random(star_seed)
+            star_x = star_rng.uniform(0, config.width)
+            star_y = star_rng.uniform(0, config.height)
+            scolor = star_rng.choice(STAR_COLORS)
+            sradius = star_rng.randint(1, 2 if layer < 0.7 else 3)
+            offset_x = (camera_pos.x * (1 - layer)) % config.width
+            offset_y = (camera_pos.y * (1 - layer)) % config.height
+            screen_x = (star_x - offset_x) % config.width
+            screen_y = (star_y - offset_y) % config.height
+            pygame.draw.circle(surface, scolor, (int(screen_x), int(screen_y)), sradius)
 
-def draw_enemy_indicators(surface, camera_pos, enemies, config):
-    center = pygame.Vector2(config.width // 2, config.height // 2) 
-    radius = min(config.width, config.height) // 2 - 40 
-    
-    for enemy in enemies: 
-        enemy_screen = enemy.pos - camera_pos + center 
-        if not (0 <= enemy_screen.x < config.width and 0 <= enemy_screen.y < config.height): 
-            direction = (enemy.pos - camera_pos) 
-            dist = direction.length() 
-            if dist > 0: 
-                direction = direction.normalize() 
-                min_r, max_r = 8, 24 
-                indicator_radius = max(min_r, max_r - int(dist // 300)) 
-                indicator_pos = center + direction * radius 
-                
-                triangle_points = [ 
-                    (indicator_pos.x + indicator_radius * direction.x, indicator_pos.y + indicator_radius * direction.y), 
-                    (indicator_pos.x - indicator_radius * direction.y, indicator_pos.y + indicator_radius * direction.x), 
-                    (indicator_pos.x + indicator_radius * direction.y, indicator_pos.y - indicator_radius * direction.x)  
+def draw_enemy_indicators(surface, camera_pos, enemies, config, game_api=None):
+    if game_api and "draw_enemy_indicators" in game_api and game_api["draw_enemy_indicators"] is not draw_enemy_indicators:
+        return game_api["draw_enemy_indicators"](surface, camera_pos, enemies, config, game_api)
+    center = pygame.Vector2(config.width // 2, config.height // 2)
+    radius = min(config.width, config.height) // 2 - 40
+    for enemy in enemies:
+        enemy_screen = enemy.pos - camera_pos + center
+        if not (0 <= enemy_screen.x < config.width and 0 <= enemy_screen.y < config.height):
+            direction = (enemy.pos - camera_pos)
+            dist = direction.length()
+            if dist > 0:
+                direction = direction.normalize()
+                min_r, max_r = 8, 24
+                indicator_radius = max(min_r, max_r - int(dist // 300))
+                indicator_pos = center + direction * radius
+                triangle_points = [
+                    (indicator_pos.x + indicator_radius * direction.x, indicator_pos.y + indicator_radius * direction.y),
+                    (indicator_pos.x - indicator_radius * direction.y, indicator_pos.y + indicator_radius * direction.x),
+                    (indicator_pos.x + indicator_radius * direction.y, indicator_pos.y - indicator_radius * direction.x)
                 ]
-                pygame.draw.polygon(surface, (255, 100, 0), triangle_points) 
+                pygame.draw.polygon(surface, (255, 100, 0), triangle_points)
 
-def draw_lives(screen, lives, config):
-    for i in range(PLAYER_LIVES): 
-        color = PLAYER_COLORS[i] if i < lives else (40, 40, 40) 
-        pygame.draw.circle(screen, color, (config.width - 40 - i * 40, 40), 16) 
+def draw_lives(screen, lives, config, game_api=None):
+    if game_api and "draw_lives" in game_api and game_api["draw_lives"] is not draw_lives:
+        return game_api["draw_lives"](screen, lives, config, game_api)
+    for i in range(PLAYER_LIVES):
+        color = PLAYER_COLORS[i] if i < lives else (40, 40, 40)
+        x = config.width - 40 - i * 40  # справа налево
+        pygame.draw.circle(screen, color, (x, 40), 16)
 
-def draw_menu(surface, text_lines, config):
+def draw_menu(surface, text_lines, config, game_api=None):
+    if game_api and "draw_menu" in game_api and game_api["draw_menu"] is not draw_menu:
+        return game_api["draw_menu"](surface, text_lines, config, game_api)
     surface.fill((10, 10, 30))
     font = pygame.font.SysFont("consolas", 48)
     total_height = len(text_lines) * 60
@@ -66,7 +74,9 @@ def draw_menu(surface, text_lines, config):
         surface.blit(surf, rect)
     pygame.display.flip()
 
-def menu_loop(surface, lines, config, achievements):
+def menu_loop(surface, lines, config, achievements, game_api=None):
+    if game_api and "menu_loop" in game_api and game_api["menu_loop"] is not menu_loop:
+        return game_api["menu_loop"](surface, lines, config, achievements, game_api)
     menu_items = []
     for line in lines:
         if "начать" in line.lower():
@@ -113,7 +123,9 @@ def menu_loop(surface, lines, config, achievements):
                 if event.key in (pygame.K_ESCAPE,):
                     return
 
-def select_difficulty(surface, config, current_difficulty):
+def select_difficulty(surface, config, current_difficulty, game_api=None):
+    if game_api and "select_difficulty" in game_api and game_api["select_difficulty"] is not select_difficulty:
+        return game_api["select_difficulty"](surface, config, current_difficulty, game_api)
     options = [
         "Легко",
         "Средне",
@@ -151,7 +163,9 @@ def select_difficulty(surface, config, current_difficulty):
                 if event.key == pygame.K_ESCAPE:
                     return current_difficulty
 
-def draw_event_banner(surface, event_name, config):
+def draw_event_banner(surface, event_name, config, game_api=None):
+    if game_api and "draw_event_banner" in game_api and game_api["draw_event_banner"] is not draw_event_banner:
+        return game_api["draw_event_banner"](surface, event_name, config, game_api)
     if not event_name:
         return
     font = pygame.font.SysFont("arial", 36, bold=True)
@@ -161,7 +175,9 @@ def draw_event_banner(surface, event_name, config):
     pygame.draw.rect(surface, (255, 255, 80), rect.inflate(40, 16), 2, border_radius=12)
     surface.blit(text, rect)
 
-def handle_player_shoot(state, mouse_pos, config, sounds):
+def handle_player_shoot(state, mouse_pos, config, sounds, game_api=None):
+    if game_api and "handle_player_shoot" in game_api and game_api["handle_player_shoot"] is not handle_player_shoot:
+        return game_api["handle_player_shoot"](state, mouse_pos, config, sounds, game_api)
     from bullet import Bullet
     player = state["player"]
     screen_center = pygame.Vector2(config.width // 2, config.height // 2)
@@ -176,7 +192,9 @@ def handle_player_shoot(state, mouse_pos, config, sounds):
         sounds["shoot"].play()
     state["camera"].kickback(-direction.normalize() * 12)
 
-def spawn_enemy(state, config):
+def spawn_enemy(state, config, game_api=None):
+    if game_api and "spawn_enemy_func" in game_api and game_api["spawn_enemy_func"] is not spawn_enemy:
+        return game_api["spawn_enemy_func"](state, config, game_api)
     from enemy import Enemy
     player = state["player"]
     angle = random.uniform(0, 2 * math.pi)
@@ -186,7 +204,9 @@ def spawn_enemy(state, config):
     enemy_type = random.choices(enemy_types, weights=[0.5, 0.2, 0.15, 0.15])[0]
     state["enemies"].append(Enemy(enemy_pos, config, enemy_type))
 
-def handle_bullet_enemy_collisions(state, achievements, config, sounds):
+def handle_bullet_enemy_collisions(state, achievements, config, sounds, game_api=None):
+    if game_api and "handle_bullet_enemy_collisions" in game_api and game_api["handle_bullet_enemy_collisions"] is not handle_bullet_enemy_collisions:
+        return game_api["handle_bullet_enemy_collisions"](state, achievements, config, sounds, game_api)
     from explosion import Explosion
     from bonus import Bonus
     for bullet in state["bullets"][:]:
@@ -230,7 +250,9 @@ def handle_bullet_enemy_collisions(state, achievements, config, sounds):
                         state["bonuses"].append(Bonus(enemy.pos, config))
                 break
 
-def handle_enemy_bullet_player_collisions(state, achievements, sounds):
+def handle_enemy_bullet_player_collisions(state, achievements, sounds, game_api=None):
+    if game_api and "handle_enemy_bullet_player_collisions" in game_api and game_api["handle_enemy_bullet_player_collisions"] is not handle_enemy_bullet_player_collisions:
+        return game_api["handle_enemy_bullet_player_collisions"](state, achievements, sounds, game_api)
     from explosion import Explosion
     player = state["player"]
     for bullet in state["enemy_bullets"][:]:
@@ -250,7 +272,9 @@ def handle_enemy_bullet_player_collisions(state, achievements, sounds):
                 return "dead"
     return None
 
-def handle_bonuses(state, achievements, sounds):
+def handle_bonuses(state, achievements, sounds, game_api=None):
+    if game_api and "handle_bonuses" in game_api and game_api["handle_bonuses"] is not handle_bonuses:
+        return game_api["handle_bonuses"](state, achievements, sounds, game_api)
     from explosion import Explosion
     player = state["player"]
     for bonus in state["bonuses"][:]:
@@ -270,13 +294,17 @@ def handle_bonuses(state, achievements, sounds):
             state["camera"].shake(strength=10, duration=10)
             state["bonuses"].remove(bonus)
 
-def handle_explosions(state):
+def handle_explosions(state, game_api=None):
+    if game_api and "handle_explosions" in game_api and game_api["handle_explosions"] is not handle_explosions:
+        return game_api["handle_explosions"](state, game_api)
     for explosion in state["explosions"][:]:
         explosion.update()
         if not explosion.is_alive():
             state["explosions"].remove(explosion)
 
 def handle_events(state, achievements, game_api=None):
+    if game_api and "handle_events" in game_api and game_api["handle_events"] is not handle_events:
+        return game_api["handle_events"](state, achievements, game_api)
     cam_w, cam_h = state["player"].config.width, state["player"].config.height
     camera_pos = state["camera"].get()
     player = state["player"]
@@ -323,6 +351,7 @@ def handle_events(state, achievements, game_api=None):
             state["event_active"] = None
             state["current_event_name"] = ""
             state["current_event_timer"] = 0
+            achievements.stats["survived_meteor"] = True
 
     # Чёрные дыры
     if state["event_active"] == "blackhole":
@@ -345,6 +374,7 @@ def handle_events(state, achievements, game_api=None):
             state["current_event_name"] = ""
             state["current_event_timer"] = 0
             state["blackholes"].clear()
+            achievements.stats["survived_blackhole"] = True
 
     # Обновление и удаление метеоров
     for meteor in state["meteors"][:]:
@@ -390,13 +420,13 @@ def handle_events(state, achievements, game_api=None):
         if state.get("blackhole_damage_timer", 0) > 0:
             state["blackhole_damage_timer"] -= 1
 
-def draw_game(state, achievements, screen, config):
-    draw_background(screen, state["camera"].get(), config)
+def draw_game(state, achievements, screen, config, game_api):
+    game_api["draw_background"](screen, state["camera"].get(), config, game_api)
     for bonus in state["bonuses"]:
         bonus.draw(screen, state["camera"].get(), state["player"])
     for explosion in state["explosions"]:
         explosion.draw(screen, state["camera"].get(), config)
-    state["player"].draw(screen, state["camera"].get(), pygame.mouse.get_pos())
+    state["player"].draw(screen, state["camera"].get(), pygame.mouse.get_pos(), game_api)
     for enemy in state["enemies"]:
         enemy.draw(screen, state["camera"].get())
     for bullet in state["bullets"]:
@@ -404,14 +434,14 @@ def draw_game(state, achievements, screen, config):
     for bullet in state["enemy_bullets"]:
         bullet.draw(screen, state["camera"].get())
     for meteor in state["meteors"]:
-        meteor.draw(screen, state["camera"].get())
+        meteor.draw(screen, state["camera"].get(), game_api)
     for bh in state["blackholes"]:
         bh.draw(screen, state["camera"].get())
-    draw_enemy_indicators(screen, state["camera"].get(), state["enemies"], config)
-    draw_lives(screen, state["player"].lives, config)
+    game_api["draw_enemy_indicators"](screen, state["camera"].get(), state["enemies"], config, game_api)
+    game_api["draw_lives"](screen, state["player"].lives, config, game_api)
     achievements.draw_stats(screen)
     achievements.draw_achievements(screen)
     achievements.update_popups()
     achievements.draw_popups(screen)
-    draw_event_banner(screen, state.get("current_event_name", ""), config)
+    game_api["draw_event_banner"](screen, state.get("current_event_name", ""), config, game_api)
     pygame.display.flip()
