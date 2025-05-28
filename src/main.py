@@ -205,6 +205,7 @@ def main():
                 game_api["player"] = state["player"]
                 game_api["camera"] = state["camera"]
                 game_state = "game"
+                gameplay_time_start = pygame.time.get_ticks()
                 continue
             elif menu_result == "exit":
                 pygame.quit()
