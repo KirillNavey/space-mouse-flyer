@@ -5,7 +5,6 @@ import sys
 from settings import *
 
 def draw_background(surface, camera_pos, config, game_api=None):
-    # Позволяет модам полностью заменить фон
     if game_api and "draw_background" in game_api and game_api["draw_background"] is not draw_background:
         return game_api["draw_background"](surface, camera_pos, config, game_api)
     surface.fill((10, 10, 30))
@@ -37,28 +36,30 @@ def draw_enemy_indicators(surface, camera_pos, enemies, config, game_api=None):
     center = pygame.Vector2(config.width // 2, config.height // 2)
     radius = min(config.width, config.height) // 2 - 40
     for enemy in enemies:
-        enemy_screen = enemy.pos - camera_pos + center
-        if not (0 <= enemy_screen.x < config.width and 0 <= enemy_screen.y < config.height):
-            direction = (enemy.pos - camera_pos)
-            dist = direction.length()
-            if dist > 0:
-                direction = direction.normalize()
-                min_r, max_r = 8, 24
-                indicator_radius = max(min_r, max_r - int(dist // 300))
-                indicator_pos = center + direction * radius
-                triangle_points = [
-                    (indicator_pos.x + indicator_radius * direction.x, indicator_pos.y + indicator_radius * direction.y),
-                    (indicator_pos.x - indicator_radius * direction.y, indicator_pos.y + indicator_radius * direction.x),
-                    (indicator_pos.x + indicator_radius * direction.y, indicator_pos.y - indicator_radius * direction.x)
-                ]
-                pygame.draw.polygon(surface, (255, 100, 0), triangle_points)
+        # Используем кастомный draw, если есть
+        if hasattr(enemy, "draw") and hasattr(enemy.draw, "__call__") and hasattr(enemy, "config"):
+            enemy_screen = enemy.pos - camera_pos + center
+            if not (0 <= enemy_screen.x < config.width and 0 <= enemy_screen.y < config.height):
+                direction = (enemy.pos - camera_pos)
+                dist = direction.length()
+                if dist > 0:
+                    direction = direction.normalize()
+                    min_r, max_r = 8, 24
+                    indicator_radius = max(min_r, max_r - int(dist // 300))
+                    indicator_pos = center + direction * radius
+                    triangle_points = [
+                        (indicator_pos.x + indicator_radius * direction.x, indicator_pos.y + indicator_radius * direction.y),
+                        (indicator_pos.x - indicator_radius * direction.y, indicator_pos.y + indicator_radius * direction.x),
+                        (indicator_pos.x + indicator_radius * direction.y, indicator_pos.y - indicator_radius * direction.x)
+                    ]
+                    pygame.draw.polygon(surface, (255, 100, 0), triangle_points)
 
 def draw_lives(screen, lives, config, game_api=None):
     if game_api and "draw_lives" in game_api and game_api["draw_lives"] is not draw_lives:
         return game_api["draw_lives"](screen, lives, config, game_api)
     for i in range(PLAYER_LIVES):
         color = PLAYER_COLORS[i] if i < lives else (40, 40, 40)
-        x = config.width - 40 - i * 40  # справа налево
+        x = config.width - 40 - i * 40
         pygame.draw.circle(screen, color, (x, 40), 16)
 
 def draw_menu(surface, text_lines, config, game_api=None):
@@ -202,7 +203,7 @@ def spawn_enemy(state, config, game_api=None):
     enemy_pos = player.pos + pygame.Vector2(math.cos(angle), math.sin(angle)) * dist
     enemy_types = ["default", "fast", "tank", "zigzag"]
     enemy_type = random.choices(enemy_types, weights=[0.5, 0.2, 0.15, 0.15])[0]
-    state["enemies"].append(Enemy(enemy_pos, config, enemy_type))
+    state["enemies"].append(Enemy(enemy_pos, config, enemy_type, game_api=game_api))
 
 def handle_bullet_enemy_collisions(state, achievements, config, sounds, game_api=None):
     if game_api and "handle_bullet_enemy_collisions" in game_api and game_api["handle_bullet_enemy_collisions"] is not handle_bullet_enemy_collisions:
@@ -210,8 +211,10 @@ def handle_bullet_enemy_collisions(state, achievements, config, sounds, game_api
     from explosion import Explosion
     from bonus import Bonus
     for bullet in state["bullets"][:]:
-        bullet.update()
-        if not bullet.is_alive():
+        # Используем кастомный update, если есть
+        if hasattr(bullet, "update") and callable(bullet.update):
+            bullet.update(game_api=game_api)
+        if not bullet.is_alive(game_api=game_api):
             state["explosions"].append(Explosion(bullet.pos, color=(180, 180, 255), type="small"))
             state["bullets"].remove(bullet)
             continue
@@ -220,23 +223,24 @@ def handle_bullet_enemy_collisions(state, achievements, config, sounds, game_api
             if hit:
                 if bullet in state["bullets"]:
                     state["bullets"].remove(bullet)
-                killed = enemy.is_hit(bullet)
+                # Используем кастомный is_hit, если есть
+                killed = enemy.is_hit(bullet, game_api=game_api) if hasattr(enemy, "is_hit") else False
                 if killed:
                     exp_color = {
                         "fast": (100, 255, 255),
                         "tank": (180, 80, 80),
                         "zigzag": (180, 255, 100),
                         "default": (255, 180, 0)
-                    }.get(enemy.type, (255, 180, 0))
+                    }.get(getattr(enemy, "type", "default"), (255, 180, 0))
                     state["explosions"].append(Explosion(enemy.pos, color=exp_color, type="big"))
                     state["enemies"].remove(enemy)
                     state["score"] += 1
                     achievements.stats["enemies_killed"] += 1
-                    if enemy.type == "tank":
+                    if getattr(enemy, "type", "") == "tank":
                         achievements.stats["tank_kills"] += 1
-                    elif enemy.type == "fast":
+                    elif getattr(enemy, "type", "") == "fast":
                         achievements.stats["fast_kills"] += 1
-                    elif enemy.type == "zigzag":
+                    elif getattr(enemy, "type", "") == "zigzag":
                         achievements.stats["zigzag_kills"] += 1
                     now = pygame.time.get_ticks()
                     if now - achievements.stats["last_kill_time"] < 5000:
@@ -256,14 +260,15 @@ def handle_enemy_bullet_player_collisions(state, achievements, sounds, game_api=
     from explosion import Explosion
     player = state["player"]
     for bullet in state["enemy_bullets"][:]:
-        bullet.update()
-        if not bullet.is_alive():
+        if hasattr(bullet, "update") and callable(bullet.update):
+            bullet.update(game_api=game_api)
+        if not bullet.is_alive(game_api=game_api):
             state["explosions"].append(Explosion(bullet.pos, color=RED, type="small"))
             state["enemy_bullets"].remove(bullet)
         elif bullet.pos.distance_to(player.pos) < (player.radius + 5) and player.lives > 0:
             state["enemy_bullets"].remove(bullet)
-            if not player.has_effect("shield"):
-                if player.take_damage():
+            if not (hasattr(player, "has_effect") and player.has_effect("shield")):
+                if hasattr(player, "take_damage") and player.take_damage():
                     state["camera"].shake(strength=24, duration=18)
                     achievements.stats["damage_taken"] += 1
                     state["explosions"].append(Explosion(player.pos, color=(255, 80, 80), type="hollow"))
@@ -278,15 +283,18 @@ def handle_bonuses(state, achievements, sounds, game_api=None):
     from explosion import Explosion
     player = state["player"]
     for bonus in state["bonuses"][:]:
-        bonus.update(player)
-        if not bonus.is_alive():
+        if hasattr(bonus, "update") and callable(bonus.update):
+            bonus.update(player, game_api=game_api)
+        if not (hasattr(bonus, "is_alive") and bonus.is_alive(game_api=game_api)):
             state["bonuses"].remove(bonus)
         elif player.pos.distance_to(bonus.pos) < (player.radius + bonus.radius):
             if bonus.type == "heal" and player.lives < PLAYER_LIVES:
-                player.apply_effect("heal", amount=1)
+                if hasattr(player, "apply_effect"):
+                    player.apply_effect("heal", amount=1)
                 achievements.stats["heal_collected"] += 1
             elif bonus.type == "shield":
-                player.apply_effect("shield", duration=300)
+                if hasattr(player, "apply_effect"):
+                    player.apply_effect("shield", duration=300)
                 achievements.stats["shield_collected"] += 1
             state["explosions"].append(Explosion(bonus.pos, color=(100, 200, 255) if bonus.type == "shield" else (100, 255, 100), type="hollow"))
             sounds["bonus"].play()
@@ -298,8 +306,9 @@ def handle_explosions(state, game_api=None):
     if game_api and "handle_explosions" in game_api and game_api["handle_explosions"] is not handle_explosions:
         return game_api["handle_explosions"](state, game_api)
     for explosion in state["explosions"][:]:
-        explosion.update()
-        if not explosion.is_alive():
+        if hasattr(explosion, "update") and callable(explosion.update):
+            explosion.update(game_api=game_api)
+        if not (hasattr(explosion, "is_alive") and explosion.is_alive(game_api=game_api)):
             state["explosions"].remove(explosion)
 
 def handle_events(state, achievements, game_api=None):
@@ -378,12 +387,13 @@ def handle_events(state, achievements, game_api=None):
 
     # Обновление и удаление метеоров
     for meteor in state["meteors"][:]:
-        meteor.update()
+        if hasattr(meteor, "update") and callable(meteor.update):
+            meteor.update(game_api=game_api)
         if meteor.pos.y - meteor.radius > camera_pos.y + cam_w // 2 + 100:
             state["meteors"].remove(meteor)
-        elif meteor.pos.distance_to(player.pos) < (meteor.radius + player.radius):
-            if not player.has_effect("shield"):
-                if player.take_damage(amount=1, source="meteor"):
+        elif player.pos.distance_to(meteor.pos) < (meteor.radius + player.radius):
+            if not (hasattr(player, "has_effect") and player.has_effect("shield")):
+                if hasattr(player, "take_damage") and player.take_damage(amount=1, source="meteor"):
                     from explosion import Explosion
                     state["explosions"].append(Explosion(meteor.pos, color=(180, 180, 180), type="big"))
                     achievements.stats["damage_taken"] += 1
@@ -394,22 +404,24 @@ def handle_events(state, achievements, game_api=None):
 
     # Обновление и удаление чёрных дыр
     for bh in state["blackholes"][:]:
-        bh.update()
-        bh.attract(player)
+        if hasattr(bh, "update") and callable(bh.update):
+            bh.update(game_api=game_api)
+        if hasattr(bh, "attract") and callable(bh.attract):
+            bh.attract(player, game_api=game_api)
         cam_w, cam_h = player.config.width, player.config.height
         draw_x = bh.pos.x - camera_pos.x + cam_w // 2
         draw_y = bh.pos.y - camera_pos.y + cam_h // 2
         if not (0 <= draw_x < cam_w and 0 <= draw_y < cam_h):
             state["blackholes"].remove(bh)
             continue
-        if not bh.is_alive():
+        if not (hasattr(bh, "is_alive") and bh.is_alive(game_api=game_api)):
             state["blackholes"].remove(bh)
             continue
         player.vel += (bh.pos - player.pos).normalize() * 0.15
         if player.pos.distance_to(bh.pos) < 60:
             if state.get("blackhole_damage_timer", 0) <= 0:
-                if not player.has_effect("shield"):
-                    if player.take_damage(amount=1, source="blackhole"):
+                if not (hasattr(player, "has_effect") and player.has_effect("shield")):
+                    if hasattr(player, "take_damage") and player.take_damage(amount=1, source="blackhole"):
                         from explosion import Explosion
                         state["camera"].shake(strength=24, duration=18)
                         achievements.stats["damage_taken"] += 1
@@ -423,20 +435,28 @@ def handle_events(state, achievements, game_api=None):
 def draw_game(state, achievements, screen, config, game_api):
     game_api["draw_background"](screen, state["camera"].get(), config, game_api)
     for bonus in state["bonuses"]:
-        bonus.draw(screen, state["camera"].get(), state["player"])
+        if hasattr(bonus, "draw") and callable(bonus.draw):
+            bonus.draw(screen, state["camera"].get(), state["player"], game_api)
     for explosion in state["explosions"]:
-        explosion.draw(screen, state["camera"].get(), config)
-    state["player"].draw(screen, state["camera"].get(), pygame.mouse.get_pos(), game_api)
+        if hasattr(explosion, "draw") and callable(explosion.draw):
+            explosion.draw(screen, state["camera"].get(), config, game_api)
+    if hasattr(state["player"], "draw") and callable(state["player"].draw):
+        state["player"].draw(screen, state["camera"].get(), pygame.mouse.get_pos(), game_api)
     for enemy in state["enemies"]:
-        enemy.draw(screen, state["camera"].get())
+        if hasattr(enemy, "draw") and callable(enemy.draw):
+            enemy.draw(screen, state["camera"].get(), game_api)
     for bullet in state["bullets"]:
-        bullet.draw(screen, state["camera"].get())
+        if hasattr(bullet, "draw") and callable(bullet.draw):
+            bullet.draw(screen, state["camera"].get(), game_api)
     for bullet in state["enemy_bullets"]:
-        bullet.draw(screen, state["camera"].get())
+        if hasattr(bullet, "draw") and callable(bullet.draw):
+            bullet.draw(screen, state["camera"].get(), game_api)
     for meteor in state["meteors"]:
-        meteor.draw(screen, state["camera"].get(), game_api)
+        if hasattr(meteor, "draw") and callable(meteor.draw):
+            meteor.draw(screen, state["camera"].get(), game_api)
     for bh in state["blackholes"]:
-        bh.draw(screen, state["camera"].get())
+        if hasattr(bh, "draw") and callable(bh.draw):
+            bh.draw(screen, state["camera"].get(), game_api)
     game_api["draw_enemy_indicators"](screen, state["camera"].get(), state["enemies"], config, game_api)
     game_api["draw_lives"](screen, state["player"].lives, config, game_api)
     achievements.draw_stats(screen)

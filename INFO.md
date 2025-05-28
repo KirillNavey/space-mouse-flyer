@@ -7,7 +7,7 @@
 - **Date**: [2025-05-27]
 - **License**: MIT License
 - **Requirements**: Pygame 2.0 or higher, Python 3.7 or higher
-- **Version**: 1.0.1
+- **Version**: 1.0.4
 
 ## TODO List
 6. Добавить пиксель-арт стиль для графики игры.

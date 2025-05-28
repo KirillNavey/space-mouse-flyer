@@ -117,6 +117,8 @@ class Player:
             rect = rotated_image.get_rect(center=draw_pos)
             surface.blit(rotated_image, rect)
         else:
-            rotated_image = pygame.transform.rotate(self.image_orig, angle)
+            temp_image = pygame.Surface((40, 40), pygame.SRCALPHA)
+            pygame.draw.polygon(temp_image, self.color, self.shapes_points["triangle"])
+            rotated_image = pygame.transform.rotate(temp_image, angle)
             rect = rotated_image.get_rect(center=draw_pos)
             surface.blit(rotated_image, rect)

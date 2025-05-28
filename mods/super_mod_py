@@ -1,0 +1,27 @@
+import pygame
+import math
+
+def color_changer_tick(game):
+    t = pygame.time.get_ticks() * 0.003
+    player = game["player"]
+    player.color = (
+        int(128 + 127 * math.sin(t)),
+        int(128 + 127 * math.sin(t + 2)),
+        int(128 + 127 * math.sin(t + 4))
+    )
+
+def immortal_enemy_bullet_collisions(state, achievements, sounds, game_api=None):
+    # Просто удаляем вражеские пули при столкновении, не уменьшая жизни игрока
+    player = state["player"]
+    for bullet in state["enemy_bullets"][:]:
+        bullet.update(game_api=game_api) if hasattr(bullet, "update") else None
+        if not bullet.is_alive(game_api=game_api):
+            state["enemy_bullets"].remove(bullet)
+        elif bullet.pos.distance_to(player.pos) < (player.radius + 5):
+            state["enemy_bullets"].remove(bullet)
+            # Можно добавить эффект, звук, вспышку и т.д.
+    return None  # Никогда не возвращаем "dead"
+
+def apply_mod(game):
+    game["on_tick"].append(lambda: color_changer_tick(game))
+    game["handle_enemy_bullet_player_collisions"] = immortal_enemy_bullet_collisions
